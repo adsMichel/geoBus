@@ -6,14 +6,16 @@
     <title>Document</title>
 </head>
 <body>
-    <div id="map"></div>
+    <div id="map">       
+    </div>
 
     <script>
         navigator.geolocation.getCurrentPosition(position =>{
             const {latitude, longitude} = position.coords;
+            console.log(latitude, longitude);
             
             // map.innerHTML = `<iframe width="600" height="450" src="https://maps.google.com/maps?q='+latitude+','+longitude+'&amp;z=15&amp;output=embed"></iframe>`;
-            map.innerHTML = `<iframe src="https://maps.google.com/maps?q='+latitude+','+longitude+'&z=16&output=embed" height="450" width="600"></iframe>`;
+            map.innerHTML = `<iframe src="https://maps.google.com/maps?q=${latitude},${longitude}&z=12&output=embed" height="500" width="600"></iframe>`;
         });
     </script>
 </body>
