@@ -52,10 +52,10 @@
     // Configurações do GPS para forçar a atualização a cada ~10 segundos
     const geoOptions = {
         enableHighAccuracy: true, // Tenta usar o GPS para maior precisão
-        timeout: 5000,            // Tempo máximo para obter a posição (5 segundos)
+        timeout: 15000,            // Tempo máximo para obter a posição (5 segundos)
         // O cache de localização não deve ter mais de 10.000ms (10 segundos).
         // Isso força o navegador a buscar uma nova posição se a última for mais antiga.
-        maximumAge: 10000 
+        maximumAge: 20000 
     };
 
     let alertTriggered = false; // Flag para garantir que o alerta só dispare uma vez
