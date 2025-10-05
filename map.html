@@ -45,20 +45,31 @@
     // ===============================================
     // 1. CONFIGURAÇÕES
     // ===============================================
-
-    // Defina as coordenadas do local que você quer monitorar.
-    const DESTINATION_LAT = -15.8046849; // Latitude do local alvo (Ex: Obelisco - SP)
+    
+    // Coordenadas de Destino
+    const DESTINATION_LAT = -15.8046849; // Latitude do local alvo
     const DESTINATION_LON = -48.0802278;  // Longitude do local alvo
     
     // Raio de proximidade em metros.
     const PROXIMITY_RADIUS_METERS = 100; 
-
+    
     // Fator de conversão (aproximado) de graus para metros
     const METERS_PER_DEGREE = 111000;
+    
+    // Configurações do GPS para forçar a atualização a cada ~15 segundos
+    const geoOptions = {
+        enableHighAccuracy: true, // Tenta usar o GPS para maior precisão
+        timeout: 5000,            // Tempo máximo para obter a posição (5 segundos)
+        // O cache de localização não deve ter mais de 15.000ms (15 segundos).
+        // Isso força o navegador a buscar uma nova posição se a última for mais antiga.
+        maximumAge: 15000 
+    };
+
+    let alertTriggered = false; // Flag para garantir que o alerta só dispare uma vez
 
 
     // ===============================================
-    // 2. FUNÇÃO DE CÁLCULO DE DISTÂNCIA
+    // 2. FUNÇÃO DE CÁLCULO DE DISTÂNCIA (INALTERADA)
     // ===============================================
 
     function calculateApproximateDistance(lat1, lon1, lat2, lon2) {
@@ -73,15 +84,17 @@
 
 
     // ===============================================
-    // 3. OBTENÇÃO DA LOCALIZAÇÃO E VERIFICAÇÃO
+    // 3. HANDLER DE SUCESSO (CHAMADO A CADA ATUALIZAÇÃO)
     // ===============================================
 
-    // Função principal para obter a geolocalização
-    navigator.geolocation.getCurrentPosition(position => {
-        const { latitude, longitude } = position.coords;
-        console.log(`Posição Atual: Lat ${latitude}, Lon ${longitude}`);
-
-        // Calcule a distância até o destino
+    function successHandler(position) {
+        // Inclui 'accuracy' para fins de depuração
+        const { latitude, longitude, accuracy } = position.coords; 
+        const timestamp = new Date(position.timestamp).toLocaleTimeString();
+        
+        console.log(`[${timestamp}] Posição Atual: Lat ${latitude.toFixed(6)}, Lon ${longitude.toFixed(6)} | Precisão: +/- ${accuracy.toFixed(0)}m`);
+        
+        // Calcule a distância
         const distanceInMeters = calculateApproximateDistance(
             latitude,
             longitude,
@@ -91,20 +104,26 @@
 
         console.log(`Distância até o destino: ${distanceInMeters.toFixed(2)} metros`);
 
-        // VERIFICAÇÃO: Se a distância for menor ou igual ao raio, dispara o alerta.
+        // VERIFICAÇÃO: Dispara o alerta se estiver próximo E se o alerta não foi disparado
         if (distanceInMeters <= PROXIMITY_RADIUS_METERS) {
-            alert(`🥳 ALERTA DE PROXIMIDADE! Você está a APENAS ${distanceInMeters.toFixed(0)} metros do seu destino!`);
+            
+            if (!alertTriggered) {
+                alert(`🎯 ALERTA DE PROXIMIDADE! Você está a APENAS ${distanceInMeters.toFixed(0)} metros do seu destino!`);
+                alertTriggered = true; // Marca como disparado
+            }
         } else {
-            console.log("Você ainda está fora do raio de proximidade.");
+            // Se saiu do raio de proximidade, permite que o alerta dispare novamente se voltar
+            alertTriggered = false; 
         }
 
-        // Código para atualizar o Iframe do mapa (requer um elemento <div id="map"> no HTML)
-        const map = document.getElementById('map'); 
-        if (map) {
-             // 🎯 URL CORRIGIDA: Usa o formato padrão de embed do Google Maps.
+        // Código para atualizar o Iframe do mapa
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+             // 🎯 URL CORRIGIDA
              const correctMapUrl = `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`;
              
-             map.innerHTML = `<iframe 
+             
+             mapElement.innerHTML = `<iframe 
                                  src="${correctMapUrl}" 
                                  height="500" 
                                  width="600" 
@@ -113,10 +132,33 @@
                                  allowfullscreen
                               ></iframe>`;
         }
-    }, (error) => {
-        // Função de erro caso a geolocalização falhe
-        console.error("Erro ao obter a geolocalização:", error);
-    });
+    }
+
+
+    // ===============================================
+    // 4. HANDLER DE ERRO
+    // ===============================================
+
+    function errorHandler(error) {
+        console.error("Erro ao monitorar a geolocalização:", error.code, error.message);
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+             let errorMessage = (error.code === 1) ? "Acesso à localização negado pelo usuário." : "Erro ao obter a localização.";
+             mapElement.innerHTML = `<p style="color:red; text-align:center;">${errorMessage}</p>`;
+        }
+    }
+
+
+    // ===============================================
+    // 5. INÍCIO DO MONITORAMENTO CONTÍNUO
+    // ===============================================
+    
+    // watchPosition inicia o monitoramento e o watchID guarda a referência (se quiser parar depois)
+    const watchID = navigator.geolocation.watchPosition(
+        successHandler, 
+        errorHandler, 
+        geoOptions // Usa as opções que definem o intervalo de ~15s
+    );
 </script>
 
     
