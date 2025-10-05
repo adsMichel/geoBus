@@ -74,6 +74,7 @@
 
     let alertTriggered = false; 
     // Obtenha a referência do iframe e do elemento de status ANTES de iniciar o monitoramento
+    // OBS: É ESSENCIAL que 'mapFrame' e 'statusElement' existam no HTML
     const mapFrame = document.getElementById('mapFrame');
     const statusElement = document.getElementById('status');
 
@@ -121,12 +122,12 @@
             alertTriggered = false; 
         }
 
-        // 🎯 CÓDIGO CORRIGIDO PARA O IFRAME: Apenas muda o atributo 'src'
+        // 🎯 CÓDIGO CORRIGIDO PARA O IFRAME
         if (mapFrame) {
-             // 1. Constrói a URL corretamente (usando ${} para as variáveis)
+             // CORREÇÃO: Usando ${latitude} e ${longitude} para inserir os valores na URL
              const correctMapUrl = `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`;
              
-             // 2. Muda apenas o 'src' do iframe, sem recarregar o elemento inteiro!
+             // Apenas muda o 'src' do iframe, evitando o loop de recarga!
              mapFrame.src = correctMapUrl;
         }
     }
@@ -142,7 +143,6 @@
              let errorMessage = (error.code === 1) ? "Acesso à localização negado pelo usuário. Permita o uso do GPS." : "Erro ao obter a localização.";
              statusElement.innerHTML = `<p style="color:red; text-align:center;">${errorMessage}</p>`;
         }
-        // Além disso, desabilita o iframe se houver erro
         if (mapFrame) {
             mapFrame.src = "";
         }
@@ -153,7 +153,6 @@
     // 5. INÍCIO DO MONITORAMENTO CONTÍNUO
     // ===============================================
     
-    // Inicia o monitoramento a cada 15 segundos
     const watchID = navigator.geolocation.watchPosition(
         successHandler, 
         errorHandler, 
