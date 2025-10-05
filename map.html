@@ -39,110 +39,79 @@
     </script> -->
 
     <script>
-    // ===============================================
-    // 1. CONFIGURAÇÕES
-    // ===============================================
-    const DESTINATION_LAT = -15.8051211; // Latitude do local alvo
-    const DESTINATION_LON = -48.0799188;  // Longitude do local alvo
-    const PROXIMITY_RADIUS_METERS = 200; // Raio de proximidade (em metros)
+        // 1. Defina as Coordenadas de Destino e o Raio
+        // EX: Coordenadas da Torre Eiffel em Paris
+        const DESTINATION_LAT = -15.8051211; // Latitude do local alvo
+        const DESTINATION_LON = -48.0799188;  // Longitude do local alvo
+        const PROXIMITY_RADIUS_METERS = 200; // Raio de proximidade (em metros)
 
-    // Fator de conversão (aproximado) de graus para metros
-    const METERS_PER_DEGREE = 111000;
-    
-    // Configurações do GPS para forçar a atualização a cada ~10 segundos
-    const geoOptions = {
-        enableHighAccuracy: true, // Tenta usar o GPS para maior precisão
-        timeout: 15000,            // Tempo máximo para obter a posição (5 segundos)
-        // O cache de localização não deve ter mais de 10.000ms (10 segundos).
-        // Isso força o navegador a buscar uma nova posição se a última for mais antiga.
-        maximumAge: 20000 
-    };
+        // Fator de conversão (aproximado) para transformar graus em metros
+        // A cada 1 grau de latitude/longitude (no equador) ~ 111.320 metros.
+        // Usamos um valor aproximado para a área de interesse: 1 grau de latitude é ~111.000 metros.
+        const METERS_PER_DEGREE = 111000;
 
-    let alertTriggered = false; // Flag para garantir que o alerta só dispare uma vez
+        /**
+         * Função para calcular uma distância aproximada (em metros) usando o Teorema de Pitágoras
+         * em coordenadas planas (método rápido para pequenas distâncias).
+         * @param {number} lat1 - Latitude do Ponto 1.
+         * @param {number} lon1 - Longitude do Ponto 1.
+         * @param {number} lat2 - Latitude do Ponto 2 (Destino).
+         * @param {number} lon2 - Longitude do Ponto 2 (Destino).
+         * @returns {number} A distância aproximada em metros.
+         */
+        function calculateApproximateDistance(lat1, lon1, lat2, lon2) {
+            // Diferença na Latitude e Longitude
+            const dLat = lat2 - lat1;
+            const dLon = lon2 - lon1;
 
+            // Converta a diferença em graus para metros (aproximado)
+            const dLatMeters = dLat * METERS_PER_DEGREE;
+            // Multiplicador do cosseno para corrigir a distância de longitude à medida que se afasta do equador
+            // Math.cos(lat1 * Math.PI / 180) -> Converte latitude em radianos para o cálculo do cosseno
+            const dLonMeters = dLon * METERS_PER_DEGREE * Math.cos(lat1 * Math.PI / 180);
 
-    // ===============================================
-    // 2. FUNÇÃO DE CÁLCULO DE DISTÂNCIA (INALTERADA)
-    // ===============================================
-    function calculateApproximateDistance(lat1, lon1, lat2, lon2) {
-        const dLat = lat2 - lat1;
-        const dLon = lon2 - lon1;
-
-        const dLatMeters = dLat * METERS_PER_DEGREE;
-        const dLonMeters = dLon * METERS_PER_DEGREE * Math.cos(lat1 * Math.PI / 180);
-
-        return Math.sqrt(dLatMeters * dLatMeters + dLonMeters * dLonMeters);
-    }
-
-
-    // ===============================================
-    // 3. HANDLER DE SUCESSO (CHAMADO A CADA ATUALIZAÇÃO)
-    // ===============================================
-    function successHandler(position) {
-        const { latitude, longitude } = position.coords;
-        const timestamp = new Date(position.timestamp).toLocaleTimeString();
-        
-        console.log(`[${timestamp}] Posição Atual: Lat ${latitude.toFixed(6)}, Lon ${longitude.toFixed(6)}`);
-        
-        // Calcule a distância
-        const distanceInMeters = calculateApproximateDistance(
-            latitude,
-            longitude,
-            DESTINATION_LAT,
-            DESTINATION_LON
-        );
-
-        console.log(`Distância até o destino: ${distanceInMeters.toFixed(2)} metros`);
-
-        // Verifique a proximidade
-        if (distanceInMeters <= PROXIMITY_RADIUS_METERS) {
+            // Aplica o Teorema de Pitágoras: a^2 + b^2 = c^2 (ou sqrt(a^2 + b^2) = c)
+            const distance = Math.sqrt(dLatMeters * dLatMeters + dLonMeters * dLonMeters);
             
-            // Dispara o alerta APENAS se não tiver sido disparado antes
-            if (!alertTriggered) {
-                alert(`🎯 ALERTA! Você está a APENAS ${distanceInMeters.toFixed(0)} metros do seu destino!`);
-                alertTriggered = true; // Marca como disparado
-                
-                // Opcional: Para de monitorar para economizar bateria/recursos:
-                // navigator.geolocation.clearWatch(watchID); 
+            return distance;
+        }
+
+        // Função principal para obter a geolocalização
+        navigator.geolocation.getCurrentPosition(position => {
+            const { latitude, longitude } = position.coords;
+            console.log(`Posição Atual: Lat ${latitude}, Lon ${longitude}`);
+
+            // 2. Calcule a distância até o destino
+            const distanceInMeters = calculateApproximateDistance(
+                latitude,
+                longitude,
+                DESTINATION_LAT,
+                DESTINATION_LON
+            );
+
+            console.log(`Distância até o destino: ${distanceInMeters.toFixed(2)} metros`);
+
+            // 3. Verifique se está próximo
+            if (distanceInMeters <= PROXIMITY_RADIUS_METERS) {
+                // Emite o alerta se a distância for menor ou igual ao raio de proximidade
+                alert(`🥳 Você está a APENAS ${distanceInMeters.toFixed(0)} metros de seu destino: Lat ${DESTINATION_LAT}, Lon ${DESTINATION_LON}!`);
+            } else {
+                console.log("Você ainda não está dentro do raio de proximidade.");
             }
-        } else {
-            // Se afastou, redefinimos a flag para permitir um novo alerta no futuro
-            alertTriggered = false; 
-        }
 
-        // Atualiza o mapa no HTML
-        const mapElement = document.getElementById('map');
-        if (mapElement) {
-             // Mantenho seu formato de URL para o mapa, mas a URL padrão do Google Maps é mais confiável.
-             mapElement.innerHTML = `<iframe src="https://maps.google.com/maps?q=$${latitude},${longitude}&z=12&output=embed" height="500" width="600"></iframe>`;
-        }
-    }
-
-    // ===============================================
-    // 4. HANDLER DE ERRO
-    // ===============================================
-    function errorHandler(error) {
-        // Trata erros (ex: usuário nega permissão)
-        console.error("Erro ao monitorar a geolocalização:", error.code, error.message);
-        const mapElement = document.getElementById('map');
-        if (mapElement) {
-             let errorMessage = (error.code === 1) ? "Acesso à localização negado pelo usuário." : "Erro ao obter a localização.";
-             mapElement.innerHTML = `<p style="color:red;">${errorMessage}</p>`;
-        }
-    }
-
-
-    // ===============================================
-    // 5. INÍCIO DO MONITORAMENTO CONTÍNUO
-    // ===============================================
-    
-    // watchPosition inicia o monitoramento e o watchID guarda a referência
-    const watchID = navigator.geolocation.watchPosition(
-        successHandler, 
-        errorHandler, 
-        geoOptions // Usa as opções que definem o intervalo de ~10s
-    );
-</script>
+            // 4. Código para o Iframe (manter a funcionalidade de mapa original)
+            // **ATENÇÃO**: A URL que você forneceu para o iframe (https://maps.google.com/maps?q=$...) não é a URL correta/padrão do Google Maps Embed. 
+            // A URL correta deve ser algo como: https://maps.google.com/maps?q=...
+            // Mantenha o seu código original, mas saiba que ele pode não funcionar dependendo de como você está tentando exibir o mapa.
+            const map = document.getElementById('map'); // Presume que você tem um elemento com id="map" no seu HTML
+            if (map) {
+                map.innerHTML = `<iframe src="https://maps.google.com/maps?q=$${latitude},${longitude}&z=12&output=embed" height="500" width="600"></iframe>`;
+            }
+        }, (error) => {
+            // Função de erro para caso a geolocalização falhe (ex: usuário não permitiu)
+            console.error("Erro ao obter a geolocalização:", error);
+        });
+    </script>
 
     
 </body>
