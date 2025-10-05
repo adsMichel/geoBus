@@ -124,7 +124,7 @@
         // 🎯 CÓDIGO CORRIGIDO PARA O IFRAME: Apenas muda o atributo 'src'
         if (mapFrame) {
              // 1. Constrói a URL corretamente (usando ${} para as variáveis)
-             const correctMapUrl = `https://maps.google.com/maps?q=$${latitude},${longitude}&z=15&output=embed`;
+             const correctMapUrl = `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`;
              
              // 2. Muda apenas o 'src' do iframe, sem recarregar o elemento inteiro!
              mapFrame.src = correctMapUrl;
