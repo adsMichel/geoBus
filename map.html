@@ -37,117 +37,112 @@
             map.innerHTML = `<iframe src="https://maps.google.com/maps?q=${latitude},${longitude}&z=12&output=embed" height="500" width="600"></iframe>`;
         });
     </script> -->
-    
+
     <script>
-        // ===============================================
-        // 1. CONFIGURAÇÕES
-        // ===============================================
+    // ===============================================
+    // 1. CONFIGURAÇÕES
+    // ===============================================
+    const DESTINATION_LAT = -15.8051211; // Latitude do local alvo
+    const DESTINATION_LON = -48.0799188;  // Longitude do local alvo
+    const PROXIMITY_RADIUS_METERS = 200; // Raio de proximidade (em metros)
 
-        // Coordenadas de Destino (Exemplo: Torre Eiffel em Paris)
-        const DESTINATION_LAT = -15.8046849; // Latitude do local alvo
-        const DESTINATION_LON = -48.0802278;  // Longitude do local alvo
+    // Fator de conversão (aproximado) de graus para metros
+    const METERS_PER_DEGREE = 111000;
+    
+    // Configurações do GPS para forçar a atualização a cada ~10 segundos
+    const geoOptions = {
+        enableHighAccuracy: true, // Tenta usar o GPS para maior precisão
+        timeout: 5000,            // Tempo máximo para obter a posição (5 segundos)
+        // O cache de localização não deve ter mais de 10.000ms (10 segundos).
+        // Isso força o navegador a buscar uma nova posição se a última for mais antiga.
+        maximumAge: 10000 
+    };
+
+    let alertTriggered = false; // Flag para garantir que o alerta só dispare uma vez
+
+
+    // ===============================================
+    // 2. FUNÇÃO DE CÁLCULO DE DISTÂNCIA (INALTERADA)
+    // ===============================================
+    function calculateApproximateDistance(lat1, lon1, lat2, lon2) {
+        const dLat = lat2 - lat1;
+        const dLon = lon2 - lon1;
+
+        const dLatMeters = dLat * METERS_PER_DEGREE;
+        const dLonMeters = dLon * METERS_PER_DEGREE * Math.cos(lat1 * Math.PI / 180);
+
+        return Math.sqrt(dLatMeters * dLatMeters + dLonMeters * dLonMeters);
+    }
+
+
+    // ===============================================
+    // 3. HANDLER DE SUCESSO (CHAMADO A CADA ATUALIZAÇÃO)
+    // ===============================================
+    function successHandler(position) {
+        const { latitude, longitude } = position.coords;
+        const timestamp = new Date(position.timestamp).toLocaleTimeString();
         
-        // Raio de Proximidade (em metros)
-        const PROXIMITY_RADIUS_METERS = 200; 
-
-        // Fator de conversão (aproximado) de graus para metros
-        const METERS_PER_DEGREE = 111000;
+        console.log(`[${timestamp}] Posição Atual: Lat ${latitude.toFixed(6)}, Lon ${longitude.toFixed(6)}`);
         
-        // Configurações do GPS (para atualizar a cada ~10 segundos)
-        const geoOptions = {
-            enableHighAccuracy: true, // Tenta usar o GPS para maior precisão
-            timeout: 5000,            // Tempo máximo para obter a posição (5 segundos)
-            // O cache de localização não deve ter mais de 10.000ms (10 segundos)
-            // Isso força o navegador a buscar uma nova posição se a última tiver mais de 10s.
-            maximumAge: 10000 
-        };
-
-        let alertTriggered = false; // Flag para garantir que o alerta só dispare uma vez (opcional)
-
-
-        // ===============================================
-        // 2. FUNÇÃO DE CÁLCULO DE DISTÂNCIA
-        // ===============================================
-
-        function calculateApproximateDistance(lat1, lon1, lat2, lon2) {
-            const dLat = lat2 - lat1;
-            const dLon = lon2 - lon1;
-
-            const dLatMeters = dLat * METERS_PER_DEGREE;
-            // Correção de longitude com base na latitude (cos(lat em radianos))
-            const dLonMeters = dLon * METERS_PER_DEGREE * Math.cos(lat1 * Math.PI / 180);
-
-            // Teorema de Pitágoras
-            return Math.sqrt(dLatMeters * dLatMeters + dLonMeters * dLonMeters);
-        }
-
-
-        // ===============================================
-        // 3. FUNÇÃO DE MONITORAMENTO (CHAMADA A CADA ATUALIZAÇÃO)
-        // ===============================================
-
-        function successHandler(position) {
-            const { latitude, longitude } = position.coords;
-            const timestamp = new Date(position.timestamp).toLocaleTimeString();
-            
-            console.log(`[${timestamp}] Posição Atual: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}`);
-            
-            // Calcule a distância
-            const distanceInMeters = calculateApproximateDistance(
-                latitude,
-                longitude,
-                DESTINATION_LAT,
-                DESTINATION_LON
-            );
-
-            console.log(`Distância até o destino: ${distanceInMeters.toFixed(2)} metros`);
-
-            // Verifique se está próximo E se o alerta ainda não foi disparado
-            if (distanceInMeters <= PROXIMITY_RADIUS_METERS) {
-                
-                // Só dispara o alerta se não tiver sido disparado antes (opcional)
-                if (!alertTriggered) {
-                    alert(`🎯 ALERTA! Você está a APENAS ${distanceInMeters.toFixed(0)} metros de seu destino!`);
-                    alertTriggered = true; // Marca como disparado
-                    
-                    // Opcional: Para de monitorar após disparar o alerta
-                    // navigator.geolocation.clearWatch(watchID); 
-                }
-            } else {
-                // Se estava perto e se afastou, podemos redefinir a flag (para um novo alerta se voltar)
-                alertTriggered = false; 
-            }
-
-            // Atualiza o mapa no HTML
-            const mapElement = document.getElementById('map');
-            if (mapElement) {
-                // Link do Google Maps para sua posição atual (Latitude, Longitude)
-                mapElement.innerHTML = `<iframe src="https://maps.google.com/maps?q=${latitude},${longitude}&z=12&output=embed" height="500" width="600"></iframe>`;
-            }
-        }
-
-        function errorHandler(error) {
-            // Trata erros (ex: usuário nega permissão, GPS indisponível)
-            console.error("Erro ao monitorar a geolocalização:", error.code, error.message);
-            let errorMessage = "Erro ao obter a localização. Verifique as permissões do navegador.";
-            if (error.code === 1) {
-                errorMessage = "Acesso à localização negado pelo usuário.";
-            }
-            document.getElementById('map').innerHTML = `<p style="color:red;">${errorMessage}</p>`;
-        }
-
-
-        // ===============================================
-        // 4. INÍCIO DO MONITORAMENTO
-        // ===============================================
-        
-        // watchID é o identificador da sessão de monitoramento
-        const watchID = navigator.geolocation.watchPosition(
-            successHandler, 
-            errorHandler, 
-            geoOptions // As opções que definem o intervalo (~10s)
+        // Calcule a distância
+        const distanceInMeters = calculateApproximateDistance(
+            latitude,
+            longitude,
+            DESTINATION_LAT,
+            DESTINATION_LON
         );
-    </script>
+
+        console.log(`Distância até o destino: ${distanceInMeters.toFixed(2)} metros`);
+
+        // Verifique a proximidade
+        if (distanceInMeters <= PROXIMITY_RADIUS_METERS) {
+            
+            // Dispara o alerta APENAS se não tiver sido disparado antes
+            if (!alertTriggered) {
+                alert(`🎯 ALERTA! Você está a APENAS ${distanceInMeters.toFixed(0)} metros do seu destino!`);
+                alertTriggered = true; // Marca como disparado
+                
+                // Opcional: Para de monitorar para economizar bateria/recursos:
+                // navigator.geolocation.clearWatch(watchID); 
+            }
+        } else {
+            // Se afastou, redefinimos a flag para permitir um novo alerta no futuro
+            alertTriggered = false; 
+        }
+
+        // Atualiza o mapa no HTML
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+             // Mantenho seu formato de URL para o mapa, mas a URL padrão do Google Maps é mais confiável.
+             mapElement.innerHTML = `<iframe src="https://maps.google.com/maps?q=$${latitude},${longitude}&z=12&output=embed" height="500" width="600"></iframe>`;
+        }
+    }
+
+    // ===============================================
+    // 4. HANDLER DE ERRO
+    // ===============================================
+    function errorHandler(error) {
+        // Trata erros (ex: usuário nega permissão)
+        console.error("Erro ao monitorar a geolocalização:", error.code, error.message);
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+             let errorMessage = (error.code === 1) ? "Acesso à localização negado pelo usuário." : "Erro ao obter a localização.";
+             mapElement.innerHTML = `<p style="color:red;">${errorMessage}</p>`;
+        }
+    }
+
+
+    // ===============================================
+    // 5. INÍCIO DO MONITORAMENTO CONTÍNUO
+    // ===============================================
+    
+    // watchPosition inicia o monitoramento e o watchID guarda a referência
+    const watchID = navigator.geolocation.watchPosition(
+        successHandler, 
+        errorHandler, 
+        geoOptions // Usa as opções que definem o intervalo de ~10s
+    );
+</script>
 
     
 </body>
