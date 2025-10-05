@@ -29,6 +29,66 @@
     </div>
 
     <script>
+        const DESTINATION_LAT = -15.805608; // Latitude do local alvo
+        const DESTINATION_LON = -48.0799134;  // Longitude do local alvo
+        const PROXIMITY_RADIUS_METERS = 200; // Raio de proximidade (em metros)
+
+        // Fator de conversão (aproximado) para transformar graus em metros
+        // A cada 1 grau de latitude/longitude (no equador) ~ 111.320 metros.
+        // Usamos um valor aproximado para a área de interesse: 1 grau de latitude é ~111.000 metros.
+        const METERS_PER_DEGREE = 111000;
+
+        /**
+         * Função para calcular uma distância aproximada (em metros) usando o Teorema de Pitágoras
+         * em coordenadas planas (método rápido para pequenas distâncias).
+         * @param {number} lat1 - Latitude do Ponto 1.
+         * @param {number} lon1 - Longitude do Ponto 1.
+         * @param {number} lat2 - Latitude do Ponto 2 (Destino).
+         * @param {number} lon2 - Longitude do Ponto 2 (Destino).
+         * @returns {number} A distância aproximada em metros.
+         */
+        function calculateApproximateDistance(lat1, lon1, lat2, lon2) {
+            // Diferença na Latitude e Longitude
+            const dLat = lat2 - lat1;
+            const dLon = lon2 - lon1;
+
+            // Converta a diferença em graus para metros (aproximado)
+            const dLatMeters = dLat * METERS_PER_DEGREE;
+            // Multiplicador do cosseno para corrigir a distância de longitude à medida que se afasta do equador
+            // Math.cos(lat1 * Math.PI / 180) -> Converte latitude em radianos para o cálculo do cosseno
+            const dLonMeters = dLon * METERS_PER_DEGREE * Math.cos(lat1 * Math.PI / 180);
+
+            // Aplica o Teorema de Pitágoras: a^2 + b^2 = c^2 (ou sqrt(a^2 + b^2) = c)
+            const distance = Math.sqrt(dLatMeters * dLatMeters + dLonMeters * dLonMeters);
+            
+            return distance;
+        }
+
+        // Função principal para obter a geolocalização
+        navigator.geolocation.getCurrentPosition(position => {
+            const { latitude, longitude } = position.coords;
+            console.log(`Posição Atual: Lat ${latitude}, Lon ${longitude}`);
+
+            // 2. Calcule a distância até o destino
+            const distanceInMeters = calculateApproximateDistance(
+                latitude,
+                longitude,
+                DESTINATION_LAT,
+                DESTINATION_LON
+            );
+
+            console.log(`Distância até o destino: ${distanceInMeters.toFixed(2)} metros`);
+
+            // 3. Verifique se está próximo
+            if (distanceInMeters <= PROXIMITY_RADIUS_METERS) {
+                // Emite o alerta se a distância for menor ou igual ao raio de proximidade
+                alert(`🥳 Você está a APENAS ${distanceInMeters.toFixed(0)} metros de seu destino: Lat ${DESTINATION_LAT}, Lon ${DESTINATION_LON}!`);
+            } else {
+                console.log("Você ainda não está dentro do raio de proximidade.");
+            }
+
+
+
         navigator.geolocation.getCurrentPosition(position =>{
             const {latitude, longitude} = position.coords;
             console.log(latitude, longitude);
