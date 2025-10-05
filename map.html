@@ -28,7 +28,7 @@
     <div id="map">
     </div>
 
-    <!-- <script>
+    <script>
         navigator.geolocation.getCurrentPosition(position =>{
             const {latitude, longitude} = position.coords;
             console.log(latitude, longitude);
@@ -36,9 +36,9 @@
             // map.innerHTML = `<iframe width="600" height="450" src="https://maps.google.com/maps?q='+latitude+','+longitude+'&amp;z=15&amp;output=embed"></iframe>`;
             map.innerHTML = `<iframe src="https://maps.google.com/maps?q=${latitude},${longitude}&z=12&output=embed" height="500" width="600"></iframe>`;
         });
-    </script> -->
+    </script>
 
-    <script>
+    <!-- <script>
     // 1. Defina as Coordenadas de Destino e o Raio
     // EX: Coordenadas da Torre Eiffel em Paris
     const DESTINATION_LAT = -15.805608; // Latitude do local alvo
@@ -111,6 +111,6 @@
         // Função de erro para caso a geolocalização falhe (ex: usuário não permitiu)
         console.error("Erro ao obter a geolocalização:", error);
     });
-</script>
+</script> -->
 </body>
 </html>
