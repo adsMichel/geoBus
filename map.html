@@ -69,19 +69,14 @@
     const geoOptions = {
         enableHighAccuracy: true,
         timeout: 5000,
-        maximumAge: 15000 
+        maximumAge: 15000
     };
 
     let alertTriggered = false; 
-    // Obtenha a referência do iframe e do elemento de status ANTES de iniciar o monitoramento
-    // OBS: É ESSENCIAL que 'mapFrame' e 'statusElement' existam no HTML
+    
     const mapFrame = document.getElementById('mapFrame');
     const statusElement = document.getElementById('status');
 
-
-    // ===============================================
-    // 2. FUNÇÃO DE CÁLCULO DE DISTÂNCIA (INALTERADA)
-    // ===============================================
 
     function calculateApproximateDistance(lat1, lon1, lat2, lon2) {
         const dLat = lat2 - lat1;
@@ -92,11 +87,6 @@
 
         return Math.sqrt(dLatMeters * dLatMeters + dLonMeters * dLonMeters);
     }
-
-
-    // ===============================================
-    // 3. HANDLER DE SUCESSO (CHAMADO A CADA 15 SEGUNDOS)
-    // ===============================================
 
     function successHandler(position) {
         const { latitude, longitude, accuracy } = position.coords; 
@@ -132,11 +122,6 @@
         }
     }
 
-
-    // ===============================================
-    // 4. HANDLER DE ERRO (INALTERADO)
-    // ===============================================
-
     function errorHandler(error) {
         console.error("Erro ao monitorar a geolocalização:", error.code, error.message);
         if (statusElement) {
@@ -147,12 +132,7 @@
             mapFrame.src = "";
         }
     }
-
-
-    // ===============================================
-    // 5. INÍCIO DO MONITORAMENTO CONTÍNUO
-    // ===============================================
-    
+        
     const watchID = navigator.geolocation.watchPosition(
         successHandler, 
         errorHandler, 
